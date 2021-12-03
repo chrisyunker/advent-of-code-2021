@@ -46,12 +46,10 @@ int main(int argc, char* argv[])
         }
         else if (dir.compare("up") == 0)
         {
-            //y -= mag;
             aim -= mag;
         }
         else if (dir.compare("down") == 0)
         {
-            //y += mag;
             aim += mag;
         }
         printf("x: %d, y: %d, aim: %d\n", x, y, aim);
