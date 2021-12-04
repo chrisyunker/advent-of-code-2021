@@ -5,6 +5,35 @@
 #include <vector>
 #include <iostream>
 
+int majority(std::vector<std::string> v, int idx)
+{
+    int acc = 0;
+    for (auto item : v)
+    {
+        int val = (int)item[idx];
+        if (val == 48)
+            acc--;
+        else if (val == 49)
+            acc++;
+    }
+    return acc;
+}
+
+std::vector<std::string> filter(std::vector<std::string> v, int idx, int cmp)
+{
+    std::vector<std::string> out;
+
+    for (int i = 0; i < v.size(); i++)
+    {
+        if (v[i][idx] == cmp)
+        {
+            out.push_back(v[i]);
+        }
+    }
+
+    return out;
+}
+
 int main(int argc, char* argv[])
 {
     const int numArgs = 1;
@@ -19,87 +48,45 @@ int main(int argc, char* argv[])
 
     printf("input: %s\n", input.c_str());
 
-    std::vector<int> v;
     std::vector<std::string> ox;
     std::vector<std::string> co;
-    int init = 0;
 
     std::ifstream fd(input);
     std::string line;
     while (std::getline(fd, line))
     {
-        if (!init)
-        {
-            for (int i = 0; i < line.size(); i++)
-            {
-                v.push_back(0);
-            }
-            init = 1;
-        }
-
-        for (std::string::size_type i = 0; i < line.size(); i++)
-        {
-            int val = (int)line[i];
-            if (val == 48)
-            {
-                v[i]--;
-            }
-            else if (val == 49)
-            {
-                v[i]++;
-            }
-            else
-            {
-                printf("Bad value: %d\n", val);
-                return 1;
-            }
-
-            ox.push_back(line);
-            co.push_back(line);
-        }
+        ox.push_back(line);
+        co.push_back(line);
     }
 
+    int idx = 0;
     while (ox.size() > 1)
     {
-        for (int i = 0; i < v.size(); i++)
-        {
-            int cmp = v[i] >= 0 : 49 ? 48;
-            for (std::string e : ox)
-            {
-                if (e[i] != cmp)
-                {
-
-                }
-            }
-        }
+        int cmp = majority(ox, idx) >= 0 ? 49 : 48;
+        ox = filter(ox, idx, cmp);
+        idx++;
     }
 
 
-    std::string gammaStr = "";
-    std::string epsilonStr = "";
-    for (int i = 0; i < v.size(); i++)
+    idx = 0;
+    while (co.size() > 1)
     {
-        if (v[i] > 0)
-        {
-            gammaStr += "1";
-            epsilonStr += "0";
-        }
-        else
-        {
-            gammaStr += "0";
-            epsilonStr += "1";
-        }
+        int cmp = majority(co, idx) >= 0 ? 48 : 49;
+        co = filter(co, idx, cmp);
+        idx++;
     }
-    printf("gamma: %s\n", gammaStr.c_str());
-    printf("epsilon: %s\n", epsilonStr.c_str());
 
-    int gamma = stoi(gammaStr, nullptr, 2);
-    int epsilon = stoi(epsilonStr, nullptr, 2);
+    printf("ox bin: %s\n", ox[0].c_str());
+    printf("co bin: %s\n", co[0].c_str());
 
-    printf("gamma: %d\n", gamma);
-    printf("epsilon: %d\n", epsilon);
+    int oxv = stoi(ox[0], nullptr, 2);
+    int cov = stoi(co[0], nullptr, 2);
 
-    printf("power: %d\n", gamma * epsilon);
+    printf("ox dec: %d\n", oxv);
+    printf("co dec: %d\n", cov);
+
+    printf("rating: %d\n", oxv * cov);
+
 
     return 0;
 }
