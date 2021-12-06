@@ -6,6 +6,12 @@
 #include <map>
 #include <iostream>
 
+struct coord
+{
+    int x;
+    int y;
+};
+
 void parseInput(std::ifstream &fd, std::vector<int*>& rows)
 {
     std::string del = "->, \n";
@@ -104,16 +110,20 @@ int main(int argc, char* argv[])
         board[x] = new int[max];
         for (int y = 0; y <= max; y++)
         {
+            //printf("zero: [%d][%d]\n", x, y);
             board[x][y] = 0;
         }
     }
     
     for (auto row : rows)
     {
+        //printf("[%d][%d][%d][%d]\n", row[0], row[1], row[2], row[3]);
+
         int x1 = row[0];
         int y1 = row[1];
         int x2 = row[2];
         int y2 = row[3];
+        //printf("Add line: %d,%d -> %d,%d\n", x1,y1,x2,y2);
 
         if (x1 == x2)
         {
@@ -121,6 +131,7 @@ int main(int argc, char* argv[])
             {
                 for (int i = y1; i <= y2; i++)
                 {
+                    //printf("incy: [%d][%d]\n", x1, i);
                     board[x1][i] += 1;
                 }
             }
@@ -128,6 +139,7 @@ int main(int argc, char* argv[])
             {
                 for (int i = y2; i <= y1; i++)
                 {
+                    //printf("incy: [%d][%d]\n", x1, i);
                     board[x1][i] += 1;
                 }
             }
@@ -138,6 +150,7 @@ int main(int argc, char* argv[])
             {
                 for (int i = x1; i <= x2; i++)
                 {
+                    //printf("incx: [%d][%d] val:%d\n", i, y1, board[i][y1]);
                     board[i][y1] += 1;
                 }
             }
@@ -156,6 +169,8 @@ int main(int argc, char* argv[])
             {
                 while (x1 != x2)
                 {
+                    //printf("diag: [%d][%d]\n", x1, y1);
+
                     board[x1][y1] += 1;
 
                     if (x1 > x2)
