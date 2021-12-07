@@ -69,6 +69,7 @@
         "utility": "cpp",
         "vector": "cpp",
         "__availability": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "list": "cpp"
     }
 }
