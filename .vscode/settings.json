@@ -70,6 +70,8 @@
         "vector": "cpp",
         "__availability": "cpp",
         "filesystem": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "hash_map": "cpp",
+        "numeric": "cpp"
     }
 }
