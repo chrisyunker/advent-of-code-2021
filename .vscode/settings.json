@@ -73,6 +73,7 @@
         "list": "cpp",
         "hash_map": "cpp",
         "numeric": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "forward_list": "cpp"
     }
 }
