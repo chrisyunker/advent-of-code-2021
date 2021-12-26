@@ -239,6 +239,8 @@ int main(int argc, char *argv[])
     printf("Buffer: %d\n", b);
     buffer = b;
 
+    int enhancements = 50;
+
     std::ifstream fd(input);
     std::string line;
     std::getline(fd, line);
@@ -249,11 +251,11 @@ int main(int argc, char *argv[])
     Image image = parseImage(fd);
     printImage(image);
 
-    Image image2 = enhanceImage(image);
-    printImage(image2);
-
-    Image image3 = enhanceImage(image2);
-    printImage(image3);
+    for (int i=0; i < enhancements; i++)
+    {
+        image =  enhanceImage(image);
+        printImage(image);
+    }
 
     return 0;
 }
