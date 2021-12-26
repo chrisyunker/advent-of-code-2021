@@ -6,341 +6,225 @@
 #include <map>
 #include <iostream>
 
+using Image = std::vector<std::vector<int>>;
 
-struct Pair
+int enhance[512];
+int buffer = 10;
+
+void parseImageAlg(std::string line)
 {
-    bool xreg = false;
-    Pair* xp;
-    int x;
-    bool yreg = false;
-    Pair* yp;
-    int y;
-};
+    for (int i = 0; i < 512; i++)
+    {
+        if (line[i] == '.')
+            enhance[i] = 0;
+        else if (line[i] == '#')
+            enhance[i] = 1;
+        else
+            printf("ERROR: Bad enhancement algorithm input\n");
+    }
+}
 
-void PrintPair(Pair* p, int depth = 0)
+void printImageAlg()
 {
-    printf("[");
-    if (p->xreg)
+    for (int i = 0; i < 512; i++)
     {
-        printf("%d", p->x);
+        if (enhance[i] == 0)
+            printf(".");
+        else if (enhance[i] == 1)
+            printf("#");
+        else
+            printf("E");
     }
-    else
+    printf("\n");
+}
+
+Image parseImage(std::ifstream& fd)
+{
+    Image image;
+
+    std::string line;
+    int width = 0;
+    while (std::getline(fd, line))
     {
-        PrintPair(p->xp, depth+1);
-    }
-    printf(",");
-    if (p->yreg)
-    {
-        printf("%d", p->y);
-    }
-    else
-    {
-        PrintPair(p->yp, depth+1);
+        if (line == "")
+            continue;
+
+        width = line.size();
+
+        // Add row buffer
+        if (image.size() == 0)
+        {
+            for (int i=0; i < buffer; i++)
+            {
+                std::vector<int> br;
+                for (int j=0; j < width + (2*buffer); j++)
+                    br.push_back(0);
+                image.push_back(br);
+            }
+        }
+
+        std::vector<int> row;
+
+        // Add column buffer
+        for (int j = 0; j < buffer; j++)
+            row.push_back(0);
+
+        for (auto c : line)
+        {
+            if (c == '.')
+                row.push_back(0);
+            else if (c == '#')
+                row.push_back(1);
+            else
+                printf("ERROR: Bad image input\n");
+        }
+
+        // Add column buffer
+        for (int j = 0; j < buffer; j++)
+            row.push_back(0);
+
+        image.push_back(row);
     }
 
-    printf("]");
-    if (depth == 0)
+    // Add row buffer
+    for (int i = 0; i < buffer; i++)
+    {
+        std::vector<int> br;
+        for (int j = 0; j < width + (2 * buffer); j++)
+            br.push_back(0);
+        image.push_back(br);
+    }
+
+    return image;
+}
+
+void printImage(const Image& image)
+{
+    int light = 0;
+
+    for (auto r : image)
+    {
+        for (auto p : r)
+        {
+            if (p == 0)
+                printf(".");
+            else if (p == 1)
+            {
+                light++;
+                printf("#");
+            }
+            else
+                printf("E");
+        }
         printf("\n");
+    }
+    printf("Light pixels: %d\n", light);
 }
 
-struct Explode
+void initImage(int rows, int cols, Image &image)
 {
-    bool found = false;
-    bool explode = false;
-    int x = 0;
-    int y = 0;
-};
-
-bool AddLeft(Pair* p, int value)
-{
-    if (value == 0)
-        return true;
-
-    bool done = false;
-    if (p->yreg)
+    for (int i = 0; i < rows; i++)
     {
-        p->y += value;
-        return true;
-    }
-    else
-    {
-        done = AddLeft(p->yp, value);
-    }
-    if (done)
-        return done;
-    if (p->xreg)
-    {
-        p->x += value;
-        return true;
-    }
-    else
-    {
-        done = AddLeft(p->xp, value);
-    }
-    return done;
-}
-
-bool AddRight(Pair* p, int value)
-{
-    if (value == 0)
-        return true;
-        
-    bool done = false;
-    if (p->xreg)
-    {
-        p->x += value;
-        return true;
-    }
-    else
-    {
-        done = AddRight(p->xp, value);
-    }
-    if (done)
-        return done;
-    if (p->yreg)
-    {
-        p->y += value;
-        return true;
-    }
-    else
-    {
-        done = AddRight(p->yp, value);
-    }
-    return done;
-}
-
-Explode CheckExplode(Pair* p, int depth = 0)
-{
-    Explode e{};
-
-    if (depth >= 4 &&
-        p->xreg &&
-        p->yreg)
-    {
-        //printf("EXPLODE: [%d,%d]\n", p->x, p->y);
-        e.found = true;
-        e.explode = true;
-        e.x = p->x;
-        e.y = p->y;
-        return e;
-    }
-
-    if (!p->xreg)
-    {
-        e = CheckExplode(p->xp, depth+1);
-        if (e.explode)
+        std::vector<int> row;
+        for (int j = 0; j < cols; j++)
         {
-            delete p->xp;
-            p->xreg = true;
-            p->x = 0;
-            e.explode = false;
+            row.push_back(0);
         }
+        image.push_back(row);
     }
-    if (e.y > 0)
+}
+
+int getEnhance(int x, int y, const Image &image)
+{
+    int maxX = image[0].size();
+    int maxY = image.size();
+
+    std::vector<int> bits;
+
+    int infBit = 0;
+    if (image[y][x] == 1)
     {
-        if (p->yreg)
+        infBit = 1;
+    }
+    else
+    {
+        infBit = 0;
+    }
+
+    if (y == 0 || x == 0)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y - 1][x - 1]);
+
+    if (y == 0)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y - 1][x]);
+
+    if (y == 0 || x == maxX - 1)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y - 1][x + 1]);
+
+    if (x == 0)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y][x - 1]);
+
+    bits.push_back(image[y][x]);
+
+    if (x == maxX - 1)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y][x + 1]);
+
+    if (y == maxY - 1 || x == 0)
+        bits.push_back(0);
+    else
+        bits.push_back(image[y + 1][x - 1]);
+
+    if (y == maxY - 1)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y + 1][x]);
+
+    if (y == maxY - 1 || x == maxX - 1)
+        bits.push_back(infBit);
+    else
+        bits.push_back(image[y + 1][x + 1]);
+
+    uint16_t sum = 0UL;
+    for (int i = 0; i < 9; i++)
+    {
+        sum <<= 1;
+        if (bits[i] == 1)
+            sum |= 1UL;
+    }
+
+    return enhance[sum];
+}
+
+Image enhanceImage(const Image& image)
+{
+    Image image2;
+    initImage(image.size(), image[0].size(), image2);
+
+    for (int y = 0; y < image.size(); y++)
+    {
+        for (int x = 0; x < image[0].size(); x++)
         {
-            p->y += e.y;
-            e.y = 0;
-        }
-        else
-        {
-            if (AddRight(p->yp, e.y))
             {
-                e.y = 0;
+                image2[y][x] = getEnhance(x, y, image);
             }
         }
     }
-    if (e.found)
-        return e;
-    if (!p->yreg)
-    {
-        e = CheckExplode(p->yp, depth+1);
-        if (e.explode)
-        {
-            delete p->yp;
-            p->yreg = true;
-            p->y = 0;
-            e.explode = false;
-        }
-    }
-    if (e.x > 0)
-    {
-        if (p->xreg)
-        {
-            p->x += e.x;
-            e.x = 0;
-        }
-        else
-        {
-            if (AddLeft(p->xp, e.x))
-            {
-                e.x = 0;
-            }
-        }
-    }
-    return e;
-}
 
-bool CheckSplit(Pair* p)
-{
-    bool found = false;
-    if (p->xreg && p->x > 9)
-    {
-        //printf("SPLIT X: %d\n", p->x);
-        p->xp = new Pair{};
-        p->xp->x = p->x / 2;
-        p->xp->xreg = true;
-        p->xp->y = (p->x / 2) + (p->x % 2);
-        p->xp->yreg = true;
-        p->xreg = false;
-        p->x = 0;
-        return true;
-    }
-    else if (!p->xreg)
-    {
-        found = CheckSplit(p->xp);
-    }
-    if (found)
-        return found;
-
-    if (p->yreg && p->y > 9)
-    {
-        //printf("SPLIT Y: %d\n", p->y);
-        p->yp = new Pair{};
-        p->yp->x = p->y / 2;
-        p->yp->xreg = true;
-        p->yp->y = (p->y / 2) + (p->y % 2);
-        p->yp->yreg = true;
-        p->yreg = false;
-        p->y = 0;
-        return true;
-    }
-    else if (!p->yreg)
-    {
-        found = CheckSplit(p->yp);
-    }
-    return found;
-}
-
-Pair* AddPair(Pair* a, Pair* b)
-{
-    Pair* p = new Pair{};
-    p->xp = a;
-    p->yp = b;
-    return p;
-}
-
-void Reduce(Pair* p)
-{
-    bool done = false;
-    while (!done)
-    {
-        done = true;
-
-        Explode e;
-        do
-        {
-            e = CheckExplode(p);
-            if (e.found)
-            {
-                //printf("EXPLODE\n");
-                //PrintPair(p);
-                done = false;
-            }
-        } while (e.found);
-
-        bool split = CheckSplit(p);
-        if (split)
-        {
-            // printf("SPLIT\n");
-            //PrintPair(p);
-            done = false;
-        }
-    }
-    //PrintPair(p);
-}
-
-int Magnitude(Pair* p)
-{
-    int left = 0;
-    if (!p->xreg)
-    {
-        left = Magnitude(p->xp);
-    }
-    else
-    {
-        left = p->x;
-    }
-
-    int right = 0;
-    if (!p->yreg)
-    {
-        right = Magnitude(p->yp);
-    }
-    else
-    {
-        right = p->y;
-    }
-
-    return (left * 3) + (right * 2);
-}
-
-Pair* ParseLine(const std::string& line, int& ptr)
-{
-    Pair* p = nullptr;
-    if (line[ptr++] == '[')
-    {
-        p = new Pair{};
-        if (line[ptr] == '[')
-        {
-            p->xp = ParseLine(line, ptr);
-        }
-        else
-        {
-            int next = line.find_first_of(",", ptr);
-            p->x = std::stoi(line.substr(ptr, next-ptr));
-            p->xreg = true;
-            ptr = next;
-        }
-        ptr++; // ','
-        if (line[ptr] == '[')
-        {
-            p->yp = ParseLine(line, ptr);
-        }
-        else
-        {
-            int next = line.find_first_of("]", ptr);
-            p->y = std::stoi(line.substr(ptr, next-ptr));
-            p->yreg = true;
-            ptr = next;
-        }
-        ptr++; // ']'
-    }
-    return p;
-}
-
-Pair* Clone(Pair* p)
-{
-    Pair* n = new Pair{};
-    n->x = p->x;
-    n->xreg = p->xreg;
-    n->y = p->y;
-    n->yreg = p->yreg;
-    if (!p->xreg)
-    {
-        n->xp = Clone(p->xp);
-    }
-    if (!p->yreg)
-    {
-        n->yp = Clone(p->yp);
-    }
-    return n;
+    return image2;
 }
 
 int main(int argc, char *argv[])
 {
-    const int numArgs = 1;
+    const int numArgs = 2;
 
     if ((argc - optind) < numArgs)
     {
@@ -349,50 +233,30 @@ int main(int argc, char *argv[])
     }
 
     std::string input(argv[optind]);
+    int b = std::stoi(argv[optind+1]);
 
     printf("Input file: %s\n", input.c_str());
-
-    std::vector<Pair*> pairs;
+    printf("Buffer: %d\n", b);
+    buffer = b;
 
     std::ifstream fd(input);
     std::string line;
-    while (std::getline(fd, line))
-    {
-        int ptr = 0;
-        Pair* p = ParseLine(line, ptr);
-        pairs.push_back(p);
-    }
-    printf("Number of pairs: %lu\n", pairs.size());
+    std::getline(fd, line);
 
-    int max = 0;
-    Pair* maxA;
-    Pair* maxB;
+    parseImageAlg(line);
+    //printImageAlg();
 
-    for (int i = 0; i < pairs.size(); i++)
-    {
-        for (int j = 0; j < pairs.size(); j++)
-        {
-            if (i == j)
-            {
-                continue;
-            }
-            Pair* a = Clone(pairs[i]);
-            Pair* b = Clone(pairs[j]);
-            Pair* sum = AddPair(a, b);
-            Reduce(sum);
-            int m = Magnitude(sum);
-            if (m > max)
-            {
-                max = m;
-                maxA = pairs[i];
-                maxB = pairs[j];
-            }
-        }
-    }
+    printf("Enhance 0: %d\n", enhance[0]);
+    printf("Enhance 0: %d\n", enhance[511]);
 
-    printf("Max magnitude: %d\n", max);
-    PrintPair(maxA);
-    PrintPair(maxB);
+    Image image = parseImage(fd);
+    printImage(image);
+
+    Image image2 = enhanceImage(image);
+    printImage(image2);
+
+    Image image3 = enhanceImage(image2);
+    printImage(image3);
 
     return 0;
 }
